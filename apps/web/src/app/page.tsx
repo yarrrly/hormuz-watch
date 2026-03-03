@@ -1,11 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import Counters from '@/components/Counters';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import CrisisHeader from '@/components/CrisisHeader';
+import HeroCounter from '@/components/HeroCounter';
+import SecondaryCounters from '@/components/SecondaryCounters';
+import PersonalTeaser from '@/components/PersonalTeaser';
 import Calculator from '@/components/Calculator';
 import PredictionGame from '@/components/PredictionGame';
 import NewsTicker from '@/components/NewsTicker';
 import Map from '@/components/Map';
+import Methodology from '@/components/Methodology';
 
 // Worker endpoints (override with env vars for production)
 const OIL_PRICE_API = process.env.NEXT_PUBLIC_OIL_PRICE_API || '';
@@ -13,15 +17,16 @@ const AIS_PROXY_API = process.env.NEXT_PUBLIC_AIS_PROXY_API || '';
 
 export default function Dashboard() {
   const [oilPrice, setOilPrice] = useState<number | null>(null);
-  const [tankerCount, setTankerCount] = useState(30); // default from mock data
-  const [currentTime, setCurrentTime] = useState('');
+  const [tankerCount, setTankerCount] = useState(30);
+  const [lastDataUpdate, setLastDataUpdate] = useState(Date.now());
+  const calculatorRef = useRef<HTMLDivElement>(null);
 
   // Fetch oil price from worker
   useEffect(() => {
     const fetchPrice = async () => {
       if (!OIL_PRICE_API) {
-        // Mock value for dev
         setOilPrice(82.15);
+        setLastDataUpdate(Date.now());
         return;
       }
       try {
@@ -29,32 +34,15 @@ export default function Dashboard() {
         if (res.ok) {
           const data = await res.json();
           setOilPrice(data.price);
+          setLastDataUpdate(Date.now());
         }
       } catch {
-        setOilPrice(82.15); // fallback
+        setOilPrice(82.15);
       }
     };
 
     fetchPrice();
-    const interval = setInterval(fetchPrice, 60_000); // Refresh every minute
-    return () => clearInterval(interval);
-  }, []);
-
-  // Live clock
-  useEffect(() => {
-    const tick = () => {
-      setCurrentTime(
-        new Date().toLocaleTimeString('en-US', {
-          hour12: false,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          timeZoneName: 'short',
-        })
-      );
-    };
-    tick();
-    const interval = setInterval(tick, 1000);
+    const interval = setInterval(fetchPrice, 60_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -62,44 +50,38 @@ export default function Dashboard() {
     setTankerCount(count);
   }, []);
 
-  // Days since crisis
-  const crisisStart = new Date('2026-02-28T06:00:00Z');
-  const daysSinceCrisis = Math.floor((Date.now() - crisisStart.getTime()) / 86_400_000);
+  const scrollToCalculator = useCallback(() => {
+    calculatorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
 
   return (
     <div className="dashboard">
-      {/* Header */}
-      <header className="header">
-        <div className="header__logo">
-          <span className="header__dot" />
-          <div>
-            <h1 className="header__title">Hormuz Watch</h1>
-            <div className="header__subtitle">Real-Time Crisis Dashboard</div>
-          </div>
-        </div>
-        <div className="header__status">
-          <span>STRAIT BLOCKED</span>
-          <span style={{ color: 'var(--text-muted)' }}>|</span>
-          <span style={{ color: 'var(--amber)' }}>DAY {daysSinceCrisis}</span>
-          <span style={{ color: 'var(--text-muted)' }}>|</span>
-          <span style={{ color: 'var(--text-muted)' }}>{currentTime}</span>
-        </div>
-      </header>
+      {/* Crisis status strip */}
+      <CrisisHeader lastDataUpdate={lastDataUpdate} />
+
+      {/* Hero: ONE dominant number */}
+      <HeroCounter oilPrice={oilPrice} />
+
+      {/* Secondary counters */}
+      <SecondaryCounters oilPrice={oilPrice} tankerCount={tankerCount} />
+
+      {/* Personalized teaser — auto-detected country */}
+      <PersonalTeaser oilPrice={oilPrice} onScrollToCalculator={scrollToCalculator} />
 
       {/* News ticker */}
       <NewsTicker />
 
-      {/* Ticking counters */}
-      <Counters oilPrice={oilPrice} tankerCount={tankerCount} />
-
       {/* Main content: Map + Sidebar */}
       <div className="main-grid">
         <Map apiUrl={AIS_PROXY_API || undefined} onVesselCount={handleVesselCount} />
-        <div className="sidebar">
+        <div className="sidebar" ref={calculatorRef}>
           <Calculator oilPrice={oilPrice} />
           <PredictionGame />
         </div>
       </div>
+
+      {/* Methodology / Trust Layer */}
+      <Methodology />
 
       {/* Footer */}
       <footer className="footer">

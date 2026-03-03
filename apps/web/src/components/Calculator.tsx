@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
     computeX,
     chooseFraming,
@@ -19,25 +19,57 @@ interface CountryData {
     pt: number;
     currency: string;
     currentPrice: number;
+    litersPerYear: number;
+    label: string;
 }
 
 const COUNTRIES: Record<string, CountryData> = {
-    US: { name: "United States", flag: "🇺🇸", unit: "$/gal", pt: 0.025, currency: "USD", currentPrice: 3.45 },
-    UK: { name: "United Kingdom", flag: "🇬🇧", unit: "£/L", pt: 0.008, currency: "GBP", currentPrice: 1.45 },
-    DE: { name: "Germany", flag: "🇩🇪", unit: "€/L", pt: 0.009, currency: "EUR", currentPrice: 1.75 },
-    FR: { name: "France", flag: "🇫🇷", unit: "€/L", pt: 0.009, currency: "EUR", currentPrice: 1.80 },
-    JP: { name: "Japan", flag: "🇯🇵", unit: "¥/L", pt: 1.2, currency: "JPY", currentPrice: 175 },
-    IN: { name: "India", flag: "🇮🇳", unit: "₹/L", pt: 0.7, currency: "INR", currentPrice: 105 },
-    BR: { name: "Brazil", flag: "🇧🇷", unit: "R$/L", pt: 0.04, currency: "BRL", currentPrice: 5.80 },
-    AU: { name: "Australia", flag: "🇦🇺", unit: "A$/L", pt: 0.012, currency: "AUD", currentPrice: 1.95 },
-    CA: { name: "Canada", flag: "🇨🇦", unit: "C$/L", pt: 0.011, currency: "CAD", currentPrice: 1.65 },
-    NL: { name: "Netherlands", flag: "🇳🇱", unit: "€/L", pt: 0.009, currency: "EUR", currentPrice: 2.05 },
-    KR: { name: "South Korea", flag: "🇰🇷", unit: "₩/L", pt: 10.5, currency: "KRW", currentPrice: 1750 },
-    SA: { name: "Saudi Arabia", flag: "🇸🇦", unit: "SAR/L", pt: 0.001, currency: "SAR", currentPrice: 2.18 },
-    TR: { name: "Turkey", flag: "🇹🇷", unit: "₺/L", pt: 0.25, currency: "TRY", currentPrice: 42.50 },
-    ZA: { name: "South Africa", flag: "🇿🇦", unit: "R/L", pt: 0.15, currency: "ZAR", currentPrice: 24.50 },
-    NG: { name: "Nigeria", flag: "🇳🇬", unit: "₦/L", pt: 5.0, currency: "NGN", currentPrice: 620 },
+    US: { name: "United States", flag: "🇺🇸", unit: "$/gal", pt: 0.025, currency: "USD", currentPrice: 3.45, litersPerYear: 4542, label: "avg US household (1,200 gal/yr)" },
+    UK: { name: "United Kingdom", flag: "🇬🇧", unit: "£/L", pt: 0.008, currency: "GBP", currentPrice: 1.45, litersPerYear: 1800, label: "avg UK household" },
+    DE: { name: "Germany", flag: "🇩🇪", unit: "€/L", pt: 0.009, currency: "EUR", currentPrice: 1.75, litersPerYear: 1500, label: "avg German household" },
+    FR: { name: "France", flag: "🇫🇷", unit: "€/L", pt: 0.009, currency: "EUR", currentPrice: 1.80, litersPerYear: 1400, label: "avg French household" },
+    JP: { name: "Japan", flag: "🇯🇵", unit: "¥/L", pt: 1.2, currency: "JPY", currentPrice: 175, litersPerYear: 1200, label: "avg Japanese household" },
+    IN: { name: "India", flag: "🇮🇳", unit: "₹/L", pt: 0.7, currency: "INR", currentPrice: 105, litersPerYear: 600, label: "avg Indian household" },
+    BR: { name: "Brazil", flag: "🇧🇷", unit: "R$/L", pt: 0.04, currency: "BRL", currentPrice: 5.80, litersPerYear: 1100, label: "avg Brazilian household" },
+    AU: { name: "Australia", flag: "🇦🇺", unit: "A$/L", pt: 0.012, currency: "AUD", currentPrice: 1.95, litersPerYear: 1600, label: "avg Australian household" },
+    CA: { name: "Canada", flag: "🇨🇦", unit: "C$/L", pt: 0.011, currency: "CAD", currentPrice: 1.65, litersPerYear: 1700, label: "avg Canadian household" },
+    NL: { name: "Netherlands", flag: "🇳🇱", unit: "€/L", pt: 0.009, currency: "EUR", currentPrice: 2.05, litersPerYear: 1400, label: "avg Dutch household" },
+    KR: { name: "South Korea", flag: "🇰🇷", unit: "₩/L", pt: 10.5, currency: "KRW", currentPrice: 1750, litersPerYear: 1300, label: "avg Korean household" },
+    SA: { name: "Saudi Arabia", flag: "🇸🇦", unit: "SAR/L", pt: 0.001, currency: "SAR", currentPrice: 2.18, litersPerYear: 2200, label: "avg Saudi household" },
+    TR: { name: "Turkey", flag: "🇹🇷", unit: "₺/L", pt: 0.25, currency: "TRY", currentPrice: 42.50, litersPerYear: 800, label: "avg Turkish household" },
+    ZA: { name: "South Africa", flag: "🇿🇦", unit: "R/L", pt: 0.15, currency: "ZAR", currentPrice: 24.50, litersPerYear: 900, label: "avg South African household" },
+    NG: { name: "Nigeria", flag: "🇳🇬", unit: "₦/L", pt: 5.0, currency: "NGN", currentPrice: 620, litersPerYear: 400, label: "avg Nigerian household" },
 };
+
+// Timezone → country code mapping
+const TIMEZONE_TO_COUNTRY: Record<string, string> = {
+    'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Los_Angeles': 'US',
+    'America/Phoenix': 'US', 'America/Anchorage': 'US', 'Pacific/Honolulu': 'US',
+    'Europe/London': 'UK', 'Europe/Berlin': 'DE', 'Europe/Paris': 'FR',
+    'Asia/Tokyo': 'JP', 'Asia/Kolkata': 'IN', 'Asia/Calcutta': 'IN',
+    'America/Sao_Paulo': 'BR', 'Australia/Sydney': 'AU', 'Australia/Melbourne': 'AU',
+    'America/Toronto': 'CA', 'America/Vancouver': 'CA',
+    'Europe/Amsterdam': 'NL', 'Asia/Seoul': 'KR',
+    'Asia/Riyadh': 'SA', 'Europe/Istanbul': 'TR',
+    'Africa/Johannesburg': 'ZA', 'Africa/Lagos': 'NG',
+};
+
+function detectCountry(): string {
+    try {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        return TIMEZONE_TO_COUNTRY[tz] || 'US';
+    } catch {
+        return 'US';
+    }
+}
+
+function getCurrencySymbol(currency: string): string {
+    const map: Record<string, string> = {
+        USD: '$', EUR: '€', GBP: '£', JPY: '¥', INR: '₹', KRW: '₩',
+        BRL: 'R$', AUD: 'A$', CAD: 'C$', TRY: '₺', ZAR: 'R', NGN: '₦', SAR: 'SAR ',
+    };
+    return map[currency] || '$';
+}
 
 interface CalculatorProps {
     oilPrice: number | null;
@@ -49,22 +81,40 @@ export default function Calculator({ oilPrice }: CalculatorProps) {
     const [showPersonalize, setShowPersonalize] = useState(false);
     const [milesPerYear, setMilesPerYear] = useState<string>('');
     const [mpg, setMpg] = useState<string>('');
+    const [showPreview, setShowPreview] = useState(false);
     const price = oilPrice ?? 82.15;
+
+    // Auto-detect country on mount
+    useEffect(() => {
+        const detected = detectCountry();
+        if (COUNTRIES[detected]) {
+            setSelectedCountry(detected);
+        }
+    }, []);
 
     const isUS = selectedCountry === 'US';
 
-    // Compute per-unit impact (all countries)
+    // Compute per-unit impact
     const impact = useMemo(() => {
         const country = COUNTRIES[selectedCountry];
         if (!country) return null;
         const priceDelta = price - BRENT_BASELINE;
         const projectedIncrease = Math.max(0, priceDelta * country.pt);
+
+        // Compute annual impact
+        // For US: pt is $/gal, convert to per-liter for annual: 1 gal = 3.785 L
+        const perLiter = isUS ? projectedIncrease / 3.785 : projectedIncrease;
+        const annualImpact = perLiter * country.litersPerYear;
+        const monthlyImpact = annualImpact / 12;
+
         return {
             ...country,
             projectedIncrease,
             projectedPrice: country.currentPrice + projectedIncrease,
+            annualImpact,
+            monthlyImpact,
         };
-    }, [selectedCountry, price]);
+    }, [selectedCountry, price, isUS]);
 
     // Compute temporal framing (US only)
     const temporalFraming = useMemo(() => {
@@ -83,35 +133,52 @@ export default function Calculator({ oilPrice }: CalculatorProps) {
         return { x, framing, inp };
     }, [isUS, impact, milesPerYear, mpg]);
 
-    const handleShare = async () => {
-        if (!impact) return;
+    // Share text
+    const getShareText = useCallback(() => {
+        if (!impact) return '';
+        const sym = getCurrencySymbol(impact.currency);
+        const annualStr = impact.annualImpact >= 100
+            ? Math.round(impact.annualImpact)
+            : impact.annualImpact.toFixed(0);
 
-        let text: string;
+        return `🔴 The Hormuz blockade will cost the ${impact.label} +${sym}${annualStr}/year in fuel costs.\n\nSee your country's impact: hormuz.watch/?country=${selectedCountry}\n#HormuzWatch #OilCrisis`;
+    }, [impact, selectedCountry]);
 
-        if (isUS && temporalFraming) {
-            text = formatShareCard(temporalFraming.inp, temporalFraming.framing);
-        } else {
-            const percentIncrease = ((impact.projectedIncrease / impact.currentPrice) * 100).toFixed(1);
-            text = `🔴 Strait of Hormuz BLOCKED\n\n${impact.flag} ${impact.name} fuel projected to rise +${impact.projectedIncrease.toFixed(impact.projectedIncrease < 1 ? 3 : 2)} ${impact.unit}\nThat's a ${percentIncrease}% increase from the crisis.\n\nCheck your country: hormuz.watch\n#HormuzWatch #OilCrisis`;
-        }
+    const shareUrl = `https://hormuz.watch/?country=${selectedCountry}&utm_source=share`;
 
-        if (navigator.share) {
-            try {
-                await navigator.share({ text });
-                return;
-            } catch { /* fallback */ }
-        }
+    const handleTwitter = () => {
+        const text = getShareText();
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+    };
 
+    const handleWhatsApp = () => {
+        const text = getShareText();
+        window.open(`https://wa.me/?text=${encodeURIComponent(text + ' ' + shareUrl)}`, '_blank');
+    };
+
+    const handleTelegram = () => {
+        const text = getShareText();
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`, '_blank');
+    };
+
+    const handleCopy = async () => {
+        const text = getShareText();
         try {
-            await navigator.clipboard.writeText(text);
+            await navigator.clipboard.writeText(text + ' ' + shareUrl);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-        } catch {
-            // Fallback
-        }
+        } catch { /* fallback */ }
     };
 
     if (!impact) return null;
+
+    const sym = getCurrencySymbol(impact.currency);
+    const annualDisplay = impact.annualImpact >= 100
+        ? Math.round(impact.annualImpact).toLocaleString('en-US')
+        : impact.annualImpact.toFixed(0);
+    const monthlyDisplay = impact.monthlyImpact >= 10
+        ? Math.round(impact.monthlyImpact).toLocaleString('en-US')
+        : impact.monthlyImpact.toFixed(0);
 
     return (
         <div className="calculator">
@@ -131,7 +198,22 @@ export default function Calculator({ oilPrice }: CalculatorProps) {
                 </select>
             </div>
 
-            {/* ── Temporal Framing Hero (US only) ── */}
+            {/* ── Annual Impact Hero (all countries) ── */}
+            {impact.annualImpact > 0 && (
+                <div className="calculator__annual-hero">
+                    <div className="calculator__annual-hero-value">
+                        +{sym}{annualDisplay}<span className="calculator__annual-hero-unit">/year</span>
+                    </div>
+                    <div className="calculator__annual-hero-sub">
+                        ≈ {sym}{monthlyDisplay}/month
+                    </div>
+                    <div className="calculator__annual-hero-label">
+                        {impact.flag} {impact.label}
+                    </div>
+                </div>
+            )}
+
+            {/* ── US-specific temporal framing ── */}
             {isUS && temporalFraming && temporalFraming.x.perYear > 0 && (
                 <div className="calculator__framing-hero">
                     <div className="calculator__framing-hero-value">
@@ -206,9 +288,39 @@ export default function Calculator({ oilPrice }: CalculatorProps) {
                 </div>
             )}
 
-            <button className="calculator__share" onClick={handleShare}>
-                {copied ? '✓ Copied to clipboard!' : '📤 Share your impact'}
-            </button>
+            {/* ── Share Preview ── */}
+            <div className="calculator__share-preview">
+                <div className="calculator__share-preview-header">
+                    <div className="calculator__share-preview-title">
+                        {impact.flag} HORMUZ BLOCKADE
+                    </div>
+                    <div className="calculator__share-preview-amount">
+                        +{sym}{annualDisplay}/year
+                    </div>
+                    <div className="calculator__share-preview-domain">
+                        hormuz.watch
+                    </div>
+                </div>
+                <div className="calculator__share-preview-footer">
+                    Share what your friends will see ↓
+                </div>
+            </div>
+
+            {/* ── Platform Share Buttons ── */}
+            <div className="calculator__share-buttons">
+                <button className="share-btn share-btn--twitter" onClick={handleTwitter}>
+                    𝕏
+                </button>
+                <button className="share-btn share-btn--whatsapp" onClick={handleWhatsApp}>
+                    WhatsApp
+                </button>
+                <button className="share-btn share-btn--telegram" onClick={handleTelegram}>
+                    Telegram
+                </button>
+                <button className="share-btn share-btn--copy" onClick={handleCopy}>
+                    {copied ? '✓' : 'Copy'}
+                </button>
+            </div>
         </div>
     );
 }

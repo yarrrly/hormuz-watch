@@ -2,19 +2,27 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Hormuz Watch — Strait of Hormuz Crisis Tracker",
-  description: "Real-time dashboard tracking the 2026 Strait of Hormuz blockade. Live vessel tracking, oil prices, and personal fuel impact calculator. See how the crisis affects YOUR fuel prices.",
+  title: "Hormuz Watch — Live Strait Blockade Tracker",
+  description: "Real-time tracking of the 2026 Strait of Hormuz oil blockade. See how it affects YOUR fuel prices.",
   keywords: "Hormuz, Strait of Hormuz, oil crisis, blockade, tanker, Brent crude, fuel prices, AIS, vessel tracking",
   openGraph: {
-    title: "🔴 Hormuz Watch — The Strait is Blocked",
-    description: "20M barrels/day blocked. See how it affects YOUR fuel prices.",
+    title: "Hormuz Watch — How Much More Will YOU Pay?",
+    description: "The Hormuz blockade is costing the world $2.1M every second. Check your country's fuel impact.",
+    url: "https://hormuz.watch",
+    images: [{
+      url: "https://og.hormuz.watch/?country=US&brent=82.15&impact=180&flag=🌍&unit=avg",
+      width: 1200,
+      height: 630,
+      alt: "Hormuz Watch Crisis Dashboard",
+    }],
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "🔴 Hormuz Watch — The Strait is Blocked",
-    description: "20M barrels/day blocked. See how it affects YOUR fuel prices.",
+    title: "Hormuz Watch — Live Strait Blockade Tracker",
+    description: "Real-time tracking of the 2026 Strait of Hormuz oil blockade. See how it affects YOUR fuel prices.",
+    images: ["https://og.hormuz.watch/?country=US&brent=82.15&impact=180&flag=🌍&unit=avg"],
   },
 };
 

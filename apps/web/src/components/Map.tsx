@@ -47,7 +47,6 @@ const MOCK_VESSELS: VesselData[] = [
     { mmsi: 211000023, shipName: "ARABIAN KNIGHT", lat: 25.90, lon: 56.85, sog: 0.2, cog: 180, status: "anchored", ts: Date.now() },
     { mmsi: 211000024, shipName: "VISHWA DEEP", lat: 26.50, lon: 56.28, sog: 13.1, cog: 120, status: "underway", ts: Date.now() },
     { mmsi: 211000025, shipName: "AEGEAN WAVE", lat: 25.75, lon: 57.05, sog: 0.0, cog: 0, status: "anchored", ts: Date.now() },
-    // More clustered near Fujairah anchorage
     { mmsi: 211000026, shipName: "FUJAIRAH PRIDE", lat: 25.20, lon: 56.38, sog: 0.0, cog: 0, status: "anchored", ts: Date.now() },
     { mmsi: 211000027, shipName: "MUSCAT BAY", lat: 25.25, lon: 56.42, sog: 0.1, cog: 90, status: "anchored", ts: Date.now() },
     { mmsi: 211000028, shipName: "DAMMAM EXPRESS", lat: 25.30, lon: 56.35, sog: 0.0, cog: 0, status: "anchored", ts: Date.now() },
@@ -58,7 +57,6 @@ const MOCK_VESSELS: VesselData[] = [
 // The actual Leaflet map component (client-only)
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const L = typeof window !== 'undefined' ? require('leaflet') : null;
-// Leaflet CSS loaded via CDN in layout.tsx
 
 function LeafletMapInner({ vessels }: { vessels: VesselData[] }) {
     const mapRef = useRef<L.Map | null>(null);
@@ -68,7 +66,7 @@ function LeafletMapInner({ vessels }: { vessels: VesselData[] }) {
     useEffect(() => {
         if (!L || !containerRef.current) return;
 
-        if (mapRef.current) return; // Only init once
+        if (mapRef.current) return;
 
         const map = L.map(containerRef.current, {
             center: [26.0, 56.5],
@@ -77,7 +75,6 @@ function LeafletMapInner({ vessels }: { vessels: VesselData[] }) {
             attributionControl: true,
         });
 
-        // Dark tile layer
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
             subdomains: 'abcd',
@@ -122,7 +119,6 @@ function LeafletMapInner({ vessels }: { vessels: VesselData[] }) {
         if (!mapRef.current || !L) return;
         const map = mapRef.current;
 
-        // Clear old markers
         markersRef.current.forEach(m => m.remove());
         markersRef.current = [];
 
@@ -145,7 +141,7 @@ function LeafletMapInner({ vessels }: { vessels: VesselData[] }) {
           MMSI: ${v.mmsi}<br/>
           Status: <span style="color:${color}">${v.status.toUpperCase()}</span><br/>
           Speed: ${v.sog.toFixed(1)} kn | Course: ${v.cog.toFixed(0)}°<br/>
-          <span style="color:#64748b;font-size:0.65rem;">Position delayed 15 min for crew safety</span>
+          <span style="color:#94a3b8;font-size:0.65rem;">Position delayed 15 min for crew safety</span>
         </div>
       `, { className: 'dark-popup' });
 
@@ -169,7 +165,6 @@ export default function Map({ apiUrl, onVesselCount }: MapProps) {
 
     useEffect(() => {
         if (!apiUrl) {
-            // Use mock data
             onVesselCount?.(MOCK_VESSELS.length);
             return;
         }
@@ -198,17 +193,39 @@ export default function Map({ apiUrl, onVesselCount }: MapProps) {
 
     const anchoredCount = vessels.filter(v => v.status === 'anchored').length;
     const underwayCount = vessels.filter(v => v.status === 'underway').length;
+    const darkCount = vessels.filter(v => v.status === 'dark').length;
 
     return (
         <div className="map-container">
             <div className="map-container__header">
                 <span>🗺️ Strait of Hormuz — Vessel Tracker</span>
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--amber)' }}>● {anchoredCount} anchored</span>
-                    <span style={{ color: 'var(--green)' }}>● {underwayCount} underway</span>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {/* Legend */}
+                    <div className="map-legend">
+                        <div className="map-legend__item">
+                            <span className="map-legend__dot map-legend__dot--anchored" />
+                            {anchoredCount} anchored
+                        </div>
+                        <div className="map-legend__item">
+                            <span className="map-legend__dot map-legend__dot--underway" />
+                            {underwayCount} transiting
+                        </div>
+                        {darkCount > 0 && (
+                            <div className="map-legend__item">
+                                <span className="map-legend__dot map-legend__dot--dark" />
+                                {darkCount} AIS dark
+                            </div>
+                        )}
+                    </div>
+                    {/* Data status */}
                     <div className="map-container__live">
                         <span className="map-container__live-dot" />
-                        {isLive ? 'LIVE' : 'DEMO'}
+                        <span className="map-status">
+                            {isLive
+                                ? `AIS DATA: LIVE │ ${vessels.length} vessels │ 15-min delay`
+                                : `AIS DATA: SIMULATED │ ${vessels.length} vessels │ Live feed connecting…`
+                            }
+                        </span>
                     </div>
                 </div>
             </div>
