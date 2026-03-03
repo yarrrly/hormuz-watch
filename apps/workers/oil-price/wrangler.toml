@@ -7,7 +7,7 @@ crons = ["*/5 * * * *"]  # Every 5 minutes
 
 [[kv_namespaces]]
 binding = "HORMUZ_KV"
-id = ""  # Set after creating namespace
+id = "a49816ada79f4ed3a263eab9c391cd3f"
 
 [vars]
 TWELVE_DATA_SYMBOL = "BZ"

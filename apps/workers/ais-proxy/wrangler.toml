@@ -4,7 +4,7 @@ compatibility_date = "2025-02-28"
 
 [[kv_namespaces]]
 binding = "HORMUZ_KV"
-id = ""  # Set after creating namespace
+id = "a49816ada79f4ed3a263eab9c391cd3f"
 
 [durable_objects]
 bindings = [
@@ -13,7 +13,7 @@ bindings = [
 
 [[migrations]]
 tag = "v1"
-new_classes = ["AisProxyDO"]
+new_sqlite_classes = ["AisProxyDO"]
 
 # Secrets (set via wrangler secret put):
 # AISSTREAM_API_KEY
