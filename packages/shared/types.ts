@@ -49,3 +49,55 @@ export interface VesselSnapshot {
     anchoredCount: number;
     underwayCount: number;
 }
+
+// ── Share Card Framing ─────────────────────────────────────────
+
+export type Framing = 'abs' | 'rel' | 'yr';
+
+export interface ShareFramingInputs {
+    deltaP: number;        // $/gal price increase
+    P0: number;            // $/gal baseline price
+    milesPerYear?: number; // optional user override
+    mpg?: number;          // optional user override
+}
+
+export interface ShareFramingResult {
+    abs: number;           // $/gal
+    relPct: number;        // percentage
+    perYear: number;       // $/year
+    perMonth: number;      // $/month
+    gallonsPerYear: number;
+    chosenFraming: Framing;
+    shareText: string;
+}
+
+// ── Prediction Game ────────────────────────────────────────────
+
+export interface PredictionGameState {
+    K: number;             // number of bins (days)
+    alpha0: number;        // symmetric Dirichlet prior
+    counts: Float64Array;  // c_k (weighted vote counts)
+    total: number;         // Σ c_k
+}
+
+export interface LMSRState {
+    K: number;
+    b: number;             // liquidity parameter
+    q: Float64Array;       // net shares outstanding per bin
+}
+
+export interface GameBinResult {
+    bin: number;
+    probability: number;
+    ciLow: number;
+    ciHigh: number;
+}
+
+export interface PredictionSummary {
+    expectedMs: number;    // epoch-ms of expected end date
+    expectedDay: number;   // expected day index
+    stdDevDays: number;    // standard deviation in days
+    medianBin: number;     // median bin index
+    medianMs: number;      // epoch-ms of median date
+    totalVotes: number;
+}

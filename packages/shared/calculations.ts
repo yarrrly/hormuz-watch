@@ -1,6 +1,9 @@
 import { BRENT_BASELINE, COUNTRIES } from './countries';
 import type { FuelImpact } from './types';
 
+// ── FHWA / EIA Reference Constants (US) ──
+export { FHWA_ANNUAL_MILES, FHWA_AVG_MPG, FHWA_AVG_GALLONS, EIA_BASELINE_PRICE } from './share-framing';
+
 /**
  * ~20M barrels/day blocked → ~231.48 barrels per second
  */

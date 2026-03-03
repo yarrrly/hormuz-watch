@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Counters from '@/components/Counters';
 import Calculator from '@/components/Calculator';
+import PredictionGame from '@/components/PredictionGame';
 import NewsTicker from '@/components/NewsTicker';
 import Map from '@/components/Map';
 
@@ -96,6 +97,7 @@ export default function Dashboard() {
         <Map apiUrl={AIS_PROXY_API || undefined} onVesselCount={handleVesselCount} />
         <div className="sidebar">
           <Calculator oilPrice={oilPrice} />
+          <PredictionGame />
         </div>
       </div>
 

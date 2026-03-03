@@ -1,6 +1,14 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import {
+    computeX,
+    chooseFraming,
+    formatShareCard,
+    FHWA_AVG_GALLONS,
+    EIA_BASELINE_PRICE,
+} from '@hormuz-watch/shared';
+import type { ShareFramingInputs, Framing } from '@hormuz-watch/shared';
 
 const BRENT_BASELINE = 73;
 
@@ -38,8 +46,14 @@ interface CalculatorProps {
 export default function Calculator({ oilPrice }: CalculatorProps) {
     const [selectedCountry, setSelectedCountry] = useState('US');
     const [copied, setCopied] = useState(false);
+    const [showPersonalize, setShowPersonalize] = useState(false);
+    const [milesPerYear, setMilesPerYear] = useState<string>('');
+    const [mpg, setMpg] = useState<string>('');
     const price = oilPrice ?? 82.15;
 
+    const isUS = selectedCountry === 'US';
+
+    // Compute per-unit impact (all countries)
     const impact = useMemo(() => {
         const country = COUNTRIES[selectedCountry];
         if (!country) return null;
@@ -52,11 +66,34 @@ export default function Calculator({ oilPrice }: CalculatorProps) {
         };
     }, [selectedCountry, price]);
 
+    // Compute temporal framing (US only)
+    const temporalFraming = useMemo(() => {
+        if (!isUS || !impact) return null;
+
+        const inp: ShareFramingInputs = {
+            deltaP: impact.projectedIncrease,
+            P0: EIA_BASELINE_PRICE,
+            milesPerYear: milesPerYear ? parseFloat(milesPerYear) : undefined,
+            mpg: mpg ? parseFloat(mpg) : undefined,
+        };
+
+        const x = computeX(inp);
+        const framing = chooseFraming(inp);
+
+        return { x, framing, inp };
+    }, [isUS, impact, milesPerYear, mpg]);
+
     const handleShare = async () => {
         if (!impact) return;
 
-        const percentIncrease = ((impact.projectedIncrease / impact.currentPrice) * 100).toFixed(1);
-        const text = `🔴 Strait of Hormuz BLOCKED\n\n${impact.flag} ${impact.name} fuel projected to rise +${impact.projectedIncrease.toFixed(impact.projectedIncrease < 1 ? 3 : 2)} ${impact.unit}\nThat's a ${percentIncrease}% increase from the crisis.\n\nCheck your country: hormuz.watch\n#HormuzWatch #OilCrisis`;
+        let text: string;
+
+        if (isUS && temporalFraming) {
+            text = formatShareCard(temporalFraming.inp, temporalFraming.framing);
+        } else {
+            const percentIncrease = ((impact.projectedIncrease / impact.currentPrice) * 100).toFixed(1);
+            text = `🔴 Strait of Hormuz BLOCKED\n\n${impact.flag} ${impact.name} fuel projected to rise +${impact.projectedIncrease.toFixed(impact.projectedIncrease < 1 ? 3 : 2)} ${impact.unit}\nThat's a ${percentIncrease}% increase from the crisis.\n\nCheck your country: hormuz.watch\n#HormuzWatch #OilCrisis`;
+        }
 
         if (navigator.share) {
             try {
@@ -94,6 +131,25 @@ export default function Calculator({ oilPrice }: CalculatorProps) {
                 </select>
             </div>
 
+            {/* ── Temporal Framing Hero (US only) ── */}
+            {isUS && temporalFraming && temporalFraming.x.perYear > 0 && (
+                <div className="calculator__framing-hero">
+                    <div className="calculator__framing-hero-value">
+                        +${Math.round(temporalFraming.x.perYear)}<span className="calculator__framing-hero-unit">/year</span>
+                    </div>
+                    <div className="calculator__framing-hero-sub">
+                        ≈ ${Math.round(temporalFraming.x.perMonth)}/month
+                    </div>
+                    <div className="calculator__framing-secondary">
+                        ≈ +${temporalFraming.x.abs.toFixed(2)}/gal
+                    </div>
+                    <div className="calculator__framing-note">
+                        Based on {milesPerYear || '11,106'} mi/yr
+                        {mpg ? ` · ${mpg} mpg` : ` · ${22.6} mpg avg`}
+                    </div>
+                </div>
+            )}
+
             <div className="calculator__result">
                 <div className="calculator__current">
                     <span>Current price</span>
@@ -115,6 +171,40 @@ export default function Calculator({ oilPrice }: CalculatorProps) {
                     projected increase ({((impact.projectedIncrease / impact.currentPrice) * 100).toFixed(1)}%)
                 </div>
             </div>
+
+            {/* ── Personalize (US only) ── */}
+            {isUS && (
+                <div className="calculator__personalize">
+                    <button
+                        className="calculator__personalize-toggle"
+                        onClick={() => setShowPersonalize(!showPersonalize)}
+                    >
+                        {showPersonalize ? '▾' : '▸'} Personalize estimate
+                    </button>
+                    {showPersonalize && (
+                        <div className="calculator__personalize-fields">
+                            <div className="calculator__personalize-field">
+                                <label>Miles / year</label>
+                                <input
+                                    type="number"
+                                    placeholder="11,106"
+                                    value={milesPerYear}
+                                    onChange={(e) => setMilesPerYear(e.target.value)}
+                                />
+                            </div>
+                            <div className="calculator__personalize-field">
+                                <label>MPG</label>
+                                <input
+                                    type="number"
+                                    placeholder="22.6"
+                                    value={mpg}
+                                    onChange={(e) => setMpg(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <button className="calculator__share" onClick={handleShare}>
                 {copied ? '✓ Copied to clipboard!' : '📤 Share your impact'}

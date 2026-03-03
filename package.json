@@ -1,5 +1,6 @@
 {
   "name": "hormuz-watch",
+  "packageManager": "npm@11.8.0",
   "private": true,
   "workspaces": [
     "apps/*",
