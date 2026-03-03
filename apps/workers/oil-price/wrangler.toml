@@ -1,0 +1,18 @@
+name = "oil-price"
+main = "src/index.ts"
+compatibility_date = "2025-02-28"
+
+[triggers]
+crons = ["*/5 * * * *"]  # Every 5 minutes
+
+[[kv_namespaces]]
+binding = "HORMUZ_KV"
+id = ""  # Set after creating namespace
+
+[vars]
+TWELVE_DATA_SYMBOL = "BZ"
+
+# Secrets (set via wrangler secret put):
+# TWELVE_DATA_API_KEY
+# UPSTASH_REDIS_REST_URL
+# UPSTASH_REDIS_REST_TOKEN

@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnp.*
+
+# Build
+.next/
+out/
+dist/
+.turbo/
+.vercel/
+
+# Env
+.env
+.env.*
+.dev.vars
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Wrangler
+.wrangler/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

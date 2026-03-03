@@ -1,0 +1,21 @@
+name = "ais-proxy"
+main = "src/index.ts"
+compatibility_date = "2025-02-28"
+
+[[kv_namespaces]]
+binding = "HORMUZ_KV"
+id = ""  # Set after creating namespace
+
+[durable_objects]
+bindings = [
+  { name = "AIS_PROXY", class_name = "AisProxyDO" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["AisProxyDO"]
+
+# Secrets (set via wrangler secret put):
+# AISSTREAM_API_KEY
+# UPSTASH_REDIS_REST_URL
+# UPSTASH_REDIS_REST_TOKEN
